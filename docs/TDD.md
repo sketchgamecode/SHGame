@@ -23,7 +23,7 @@
 ```
 SHGame/
 ├── Assets/
-│   ├── _Scripts/
+│   ├── Scripts/
 │   │   ├── Core/
 │   │   ├── Characters/
 │   │   │   ├── Player/
