@@ -170,18 +170,9 @@ namespace SHGame.Characters.Player
                 case Light2D.LightType.Point:
                     return intensity * falloff;
                     
-                case Light2D.LightType.Spot:
-                    // Check if position is within spot light cone
-                    Vector2 directionToPlayer = (position - lightPosition).normalized;
-                    Vector2 lightDirection = light.transform.up; // Assuming light points "up"
-                    
-                    float angle = Vector2.Angle(lightDirection, directionToPlayer);
-                    float spotAngle = light.pointLightOuterAngle / 2f;
-                    
-                    if (angle > spotAngle) return 0f;
-                    
-                    float spotFalloff = 1f - (angle / spotAngle);
-                    return intensity * falloff * spotFalloff;
+                case Light2D.LightType.Freeform: // Spot 替换为 Freeform
+                    // 可以自定义 Freeform 的角度检测逻辑（如有需要）
+                    return intensity * falloff;
                     
                 case Light2D.LightType.Global:
                     return intensity;

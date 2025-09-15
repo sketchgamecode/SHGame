@@ -297,7 +297,7 @@ namespace SHGame.Utilities
             GUILayout.BeginArea(new Rect(10, 10, 300, 200));
             GUILayout.BeginVertical("box");
             
-            GUILayout.Label("Wu Song Game Debug", EditorGUIUtility.isProSkin ? GUI.skin.label : GUI.skin.label);
+            GUILayout.Label("Wu Song Game Debug", GUI.skin.label);
             
             if (showFPS)
             {

@@ -183,7 +183,7 @@ namespace SHGame.Characters.NPC
             switch (state)
             {
                 case NPCState.Idle:
-                    rb.velocity = Vector2.zero;
+                    rb.linearVelocity = Vector2.zero;
                     break;
                 case NPCState.Patrol:
                     if (patrolPoints == null || patrolPoints.Length == 0)
@@ -192,19 +192,19 @@ namespace SHGame.Characters.NPC
                     }
                     break;
                 case NPCState.Investigate:
-                    rb.velocity = Vector2.zero;
+                    rb.linearVelocity = Vector2.zero;
                     break;
                 case NPCState.Chase:
                     break;
                 case NPCState.Alert:
-                    rb.velocity = Vector2.zero;
+                    rb.linearVelocity = Vector2.zero;
                     break;
                 case NPCState.Dead:
-                    rb.velocity = Vector2.zero;
+                    rb.linearVelocity = Vector2.zero;
                     col.enabled = false;
                     break;
                 case NPCState.Sleeping:
-                    rb.velocity = Vector2.zero;
+                    rb.linearVelocity = Vector2.zero;
                     break;
             }
         }
@@ -243,13 +243,13 @@ namespace SHGame.Characters.NPC
                     currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
                     stateTimer = 0f;
                 }
-                rb.velocity = Vector2.zero;
+                rb.linearVelocity = Vector2.zero;
             }
             else
             {
                 // Move towards patrol point
                 Vector2 direction = (targetPoint.position - transform.position).normalized;
-                rb.velocity = direction * moveSpeed;
+                rb.linearVelocity = direction * moveSpeed;
                 
                 // Face movement direction
                 FaceDirection(direction);
@@ -264,13 +264,13 @@ namespace SHGame.Characters.NPC
             {
                 // Move towards investigation target
                 Vector2 direction = (investigationTarget - transform.position).normalized;
-                rb.velocity = direction * investigateSpeed;
+                rb.linearVelocity = direction * investigateSpeed;
                 FaceDirection(direction);
             }
             else
             {
                 // At investigation point - look around
-                rb.velocity = Vector2.zero;
+                rb.linearVelocity = Vector2.zero;
                 
                 if (stateTimer >= investigationTime)
                 {
@@ -306,7 +306,7 @@ namespace SHGame.Characters.NPC
 
             // Chase player
             Vector2 direction = (playerTransform.position - transform.position).normalized;
-            rb.velocity = direction * chaseSpeed;
+            rb.linearVelocity = direction * chaseSpeed;
             FaceDirection(direction);
         }
 
@@ -552,7 +552,7 @@ namespace SHGame.Characters.NPC
             // Draw investigation target
             if (currentState == NPCState.Investigate)
             {
-                Gizmos.color = Color.orange;
+                Gizmos.color = new Color(1f, 0.5f, 0f); // orange
                 Gizmos.DrawWireSphere(investigationTarget, investigationRadius);
                 Gizmos.DrawLine(transform.position, investigationTarget);
             }

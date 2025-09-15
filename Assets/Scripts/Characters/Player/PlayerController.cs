@@ -129,9 +129,9 @@ namespace SHGame.Characters.Player
             float currentMoveSpeed = isCrouching ? moveSpeed * 0.5f : moveSpeed;
             
             // Apply horizontal movement
-            Vector2 velocity = rb.velocity;
+            Vector2 velocity = rb.linearVelocity;
             velocity.x = horizontalInput * currentMoveSpeed;
-            rb.velocity = velocity;
+            rb.linearVelocity = velocity;
 
             // Handle sprite flipping
             if (horizontalInput > 0 && !facingRight)
@@ -166,7 +166,7 @@ namespace SHGame.Characters.Player
         {
             if (!isGrounded) return;
 
-            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
             
             // Play jump sound effect
             if (AudioManager.Instance != null)
@@ -286,7 +286,7 @@ namespace SHGame.Characters.Player
 
         public Vector2 GetPlayerVelocity()
         {
-            return rb != null ? rb.velocity : Vector2.zero;
+            return rb != null ? rb.linearVelocity : Vector2.zero;
         }
 
         #endregion

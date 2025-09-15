@@ -131,7 +131,7 @@ namespace SHGame.Interaction
             // Physics cleanup
             if (rb != null)
             {
-                rb.velocity = Vector2.zero;
+                rb.linearVelocity = Vector2.zero;
                 rb.angularVelocity = 0f;
             }
 
@@ -176,7 +176,7 @@ namespace SHGame.Interaction
                 rb.AddForce(force);
                 
                 // Apply damping to prevent excessive movement
-                rb.velocity *= 0.9f;
+                rb.linearVelocity *= 0.9f;
             }
             else
             {
