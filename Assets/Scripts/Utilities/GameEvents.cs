@@ -30,6 +30,8 @@ namespace SHGame.Utilities
         public static event Action OnLevelCompleted;
         public static event Action OnGameOver;
         public static event Action<string> OnSceneTransition;
+        public static event Action<string> OnObjectiveCompleted;
+        public static event Action<Core.LevelManager.LevelObjective> OnNewObjectiveAdded;
 
         // QTE Events
         public static event Action<bool> OnQTECompleted;
@@ -39,6 +41,19 @@ namespace SHGame.Utilities
         public static event Action<AudioClip> OnPlaySFX;
         public static event Action<AudioClip> OnPlayBGM;
         public static event Action<Core.AudioManager.MusicMood> OnMoodChanged;
+
+        // Rage System Events
+        public static event Action<float> OnRageIncreased;
+        public static event Action OnRevengeReady;
+        public static event Action OnRevengeExecuted;
+
+        // Calligraphy System Events
+        public static event Action<int> OnCharacterCompleted;
+        public static event Action OnCalligraphyCompleted;
+
+        // Item/Inventory Events
+        public static event Action<string, string> OnItemCollected;
+        public static event Action<string> OnItemUsed;
 
         #region Player Event Triggers
 
@@ -123,6 +138,16 @@ namespace SHGame.Utilities
         {
             OnSceneTransition?.Invoke(sceneName);
         }
+        
+        public static void TriggerObjectiveCompleted(string objectiveText)
+        {
+            OnObjectiveCompleted?.Invoke(objectiveText);
+        }
+        
+        public static void TriggerNewObjectiveAdded(Core.LevelManager.LevelObjective objective)
+        {
+            OnNewObjectiveAdded?.Invoke(objective);
+        }
 
         #endregion
 
@@ -158,6 +183,53 @@ namespace SHGame.Utilities
         }
 
         #endregion
+        
+        #region Rage System Event Triggers
+        
+        public static void TriggerRageIncreased(float amount)
+        {
+            OnRageIncreased?.Invoke(amount);
+        }
+        
+        public static void TriggerRevengeReady()
+        {
+            OnRevengeReady?.Invoke();
+        }
+        
+        public static void TriggerRevengeExecuted()
+        {
+            OnRevengeExecuted?.Invoke();
+        }
+        
+        #endregion
+        
+        #region Calligraphy System Event Triggers
+        
+        public static void TriggerCharacterCompleted(int characterIndex)
+        {
+            OnCharacterCompleted?.Invoke(characterIndex);
+        }
+        
+        public static void TriggerCalligraphyCompleted()
+        {
+            OnCalligraphyCompleted?.Invoke();
+        }
+        
+        #endregion
+        
+        #region Item/Inventory Event Triggers
+        
+        public static void TriggerItemCollected(string itemId, string itemName)
+        {
+            OnItemCollected?.Invoke(itemId, itemName);
+        }
+        
+        public static void TriggerItemUsed(string itemId)
+        {
+            OnItemUsed?.Invoke(itemId);
+        }
+        
+        #endregion
 
         #region Utility Methods
 
@@ -183,6 +255,8 @@ namespace SHGame.Utilities
             OnLevelCompleted = null;
             OnGameOver = null;
             OnSceneTransition = null;
+            OnObjectiveCompleted = null;
+            OnNewObjectiveAdded = null;
 
             OnQTECompleted = null;
             OnQTEStarted = null;
@@ -190,6 +264,34 @@ namespace SHGame.Utilities
             OnPlaySFX = null;
             OnPlayBGM = null;
             OnMoodChanged = null;
+            
+            OnRageIncreased = null;
+            OnRevengeReady = null;
+            OnRevengeExecuted = null;
+            
+            OnCharacterCompleted = null;
+            OnCalligraphyCompleted = null;
+            
+            OnItemCollected = null;
+            OnItemUsed = null;
+        }
+        
+        /// <summary>
+        /// Log an event for debugging purposes
+        /// </summary>
+        public static void LogEvent(string eventName, object data = null)
+        {
+            if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDebugModeEnabled())
+            {
+                if (data != null)
+                {
+                    Debug.Log($"[Event] {eventName}: {data}");
+                }
+                else
+                {
+                    Debug.Log($"[Event] {eventName}");
+                }
+            }
         }
 
         #endregion

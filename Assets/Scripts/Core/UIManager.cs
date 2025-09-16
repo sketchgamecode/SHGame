@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using System.Collections;
 using TMPro;
 
@@ -43,38 +44,69 @@ namespace SHGame.Core
         public GameObject pauseMenu;
         public GameObject gameOverPanel;
         public GameObject victoryPanel;
+        
+        [Header("Loading Screen")]
+        public GameObject loadingScreen;
+        public Slider loadingBar;
+        public TextMeshProUGUI loadingText;
+        public Image loadingBackgroundImage;
+        public Sprite[] loadingBackgrounds;
 
+        [Header("General UI Settings")]
+        public bool persistAcrossScenes = true;
+        public Canvas mainCanvas;
+        public bool autoAdjustCanvasScaler = true;
+
+        // State
         private string informationLog = "";
         private Coroutine subtitleCoroutine;
         private Coroutine qteCoroutine;
+        private Coroutine loadingFadeCoroutine;
 
         private void Awake()
         {
             if (Instance == null)
             {
                 Instance = this;
+                
+                // Make persistent if needed
+                if (persistAcrossScenes)
+                {
+                    DontDestroyOnLoad(this.gameObject);
+                }
+                
                 InitializeUI();
             }
             else
             {
-                Destroy(gameObject);
+                Destroy(this.gameObject);
             }
         }
 
         private void Start()
         {
             // Subscribe to game manager events
-            GameManager.OnGameStateChanged += OnGameStateChanged;
-            GameManager.OnGamePaused += ShowPauseMenu;
-            GameManager.OnGameResumed += HidePauseMenu;
+            if (GameManager.Instance != null)
+            {
+                GameManager.OnGameStateChanged += OnGameStateChanged;
+                GameManager.OnGamePaused += ShowPauseMenu;
+                GameManager.OnGameResumed += HidePauseMenu;
+                GameManager.OnBeforeSceneLoad += OnBeforeSceneLoad;
+                GameManager.OnAfterSceneLoad += OnAfterSceneLoad;
+            }
         }
 
         private void OnDestroy()
         {
             // Unsubscribe from events
-            GameManager.OnGameStateChanged -= OnGameStateChanged;
-            GameManager.OnGamePaused -= ShowPauseMenu;
-            GameManager.OnGameResumed -= HidePauseMenu;
+            if (GameManager.Instance != null)
+            {
+                GameManager.OnGameStateChanged -= OnGameStateChanged;
+                GameManager.OnGamePaused -= ShowPauseMenu;
+                GameManager.OnGameResumed -= HidePauseMenu;
+                GameManager.OnBeforeSceneLoad -= OnBeforeSceneLoad;
+                GameManager.OnAfterSceneLoad -= OnAfterSceneLoad;
+            }
         }
 
         private void InitializeUI()
@@ -86,6 +118,25 @@ namespace SHGame.Core
             if (stealthIndicator != null)
             {
                 stealthIndicator.SetActive(true);
+            }
+            
+            // Adjust canvas scaler if needed
+            if (autoAdjustCanvasScaler && mainCanvas != null)
+            {
+                var canvasScaler = mainCanvas.GetComponent<CanvasScaler>();
+                if (canvasScaler != null)
+                {
+                    // Set reference resolution based on current screen
+                    float screenAspect = (float)Screen.width / Screen.height;
+                    if (screenAspect > 1.7f) // Widescreen
+                    {
+                        canvasScaler.referenceResolution = new Vector2(1920, 1080);
+                    }
+                    else // Standard
+                    {
+                        canvasScaler.referenceResolution = new Vector2(1600, 900);
+                    }
+                }
             }
 
             Debug.Log("UIManager initialized successfully");
@@ -100,6 +151,7 @@ namespace SHGame.Core
             if (pauseMenu != null) pauseMenu.SetActive(false);
             if (gameOverPanel != null) gameOverPanel.SetActive(false);
             if (victoryPanel != null) victoryPanel.SetActive(false);
+            if (loadingScreen != null) loadingScreen.SetActive(false);
         }
 
         #region Dialogue System
@@ -219,6 +271,15 @@ namespace SHGame.Core
             }
         }
 
+        public void ClearInformationLog()
+        {
+            informationLog = "";
+            if (informationLogText != null)
+            {
+                informationLogText.text = "";
+            }
+        }
+
         #endregion
 
         #region QTE System
@@ -276,12 +337,152 @@ namespace SHGame.Core
 
         #endregion
 
+        #region Loading Screen
+
+        public void ShowLoadingScreen()
+        {
+            if (loadingScreen == null) return;
+            
+            // Stop any previous fade coroutine
+            if (loadingFadeCoroutine != null)
+            {
+                StopCoroutine(loadingFadeCoroutine);
+            }
+            
+            // Reset loading bar
+            if (loadingBar != null)
+            {
+                loadingBar.value = 0f;
+            }
+            
+            // Set loading text
+            if (loadingText != null)
+            {
+                loadingText.text = "正在加载...";
+            }
+            
+            // Set random background if available
+            if (loadingBackgroundImage != null && loadingBackgrounds != null && loadingBackgrounds.Length > 0)
+            {
+                int randomIndex = Random.Range(0, loadingBackgrounds.Length);
+                loadingBackgroundImage.sprite = loadingBackgrounds[randomIndex];
+            }
+            
+            // Show loading screen
+            loadingScreen.SetActive(true);
+            
+            // Fade in loading screen
+            loadingFadeCoroutine = StartCoroutine(FadeLoadingScreen(true));
+        }
+
+        public void HideLoadingScreen()
+        {
+            if (loadingScreen == null) return;
+            
+            // Stop any previous fade coroutine
+            if (loadingFadeCoroutine != null)
+            {
+                StopCoroutine(loadingFadeCoroutine);
+            }
+            
+            // Fade out loading screen
+            loadingFadeCoroutine = StartCoroutine(FadeLoadingScreen(false));
+        }
+
+        public void UpdateLoadingProgress(float progress)
+        {
+            if (loadingBar == null) return;
+            
+            // Update loading bar
+            loadingBar.value = progress;
+            
+            // Update loading text if needed
+            if (loadingText != null)
+            {
+                int percent = Mathf.RoundToInt(progress * 100);
+                loadingText.text = $"正在加载... {percent}%";
+            }
+        }
+
+        private IEnumerator FadeLoadingScreen(bool fadeIn)
+        {
+            CanvasGroup canvasGroup = loadingScreen.GetComponent<CanvasGroup>();
+            
+            // Add CanvasGroup if it doesn't exist
+            if (canvasGroup == null)
+            {
+                canvasGroup = loadingScreen.AddComponent<CanvasGroup>();
+            }
+            
+            float startAlpha = fadeIn ? 0f : 1f;
+            float targetAlpha = fadeIn ? 1f : 0f;
+            float duration = 0.5f;
+            float elapsedTime = 0f;
+            
+            canvasGroup.alpha = startAlpha;
+            
+            while (elapsedTime < duration)
+            {
+                elapsedTime += Time.unscaledDeltaTime;
+                canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, elapsedTime / duration);
+                yield return null;
+            }
+            
+            canvasGroup.alpha = targetAlpha;
+            
+            // Hide loading screen when fade out is complete
+            if (!fadeIn)
+            {
+                loadingScreen.SetActive(false);
+            }
+        }
+
+        #endregion
+
+        #region Scene Management Events
+
+        private void OnBeforeSceneLoad(string sceneName)
+        {
+            // Hide all UI except for loading screen
+            HideAllPanels();
+            
+            // Show loading screen
+            ShowLoadingScreen();
+        }
+
+        private void OnAfterSceneLoad(string sceneName)
+        {
+            // Hide loading screen
+            HideLoadingScreen();
+            
+            // Find and register scene-specific UI
+            FindSceneSpecificUI();
+        }
+
+        private void FindSceneSpecificUI()
+        {
+            // Find UI elements tagged with "LevelUI"
+            GameObject levelUI = GameObject.FindGameObjectWithTag("LevelUI");
+            if (levelUI != null)
+            {
+                Debug.Log($"Found level-specific UI: {levelUI.name}");
+                
+                // Could integrate level-specific UI here
+                // For example, connect to objective display, etc.
+            }
+        }
+
+        #endregion
+
         #region Game State UI
 
         private void OnGameStateChanged(GameManager.GameState newState)
         {
             switch (newState)
             {
+                case GameManager.GameState.Loading:
+                    // Show loading screen (handled by scene load events)
+                    break;
                 case GameManager.GameState.GameOver:
                     ShowGameOverPanel();
                     break;
@@ -355,6 +556,14 @@ namespace SHGame.Core
         public void OnQuitButtonClicked()
         {
             Application.Quit();
+            #if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+            #endif
+        }
+        
+        public void OnCloseInformationButtonClicked()
+        {
+            HideInformationPanel();
         }
 
         #endregion

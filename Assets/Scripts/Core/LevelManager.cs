@@ -11,6 +11,8 @@ namespace SHGame.Core
     /// </summary>
     public class LevelManager : MonoBehaviour
     {
+        public static LevelManager Instance { get; private set; }
+
         [Header("Level Information")]
         public string levelName = "Level 1";
         public string levelDescription = "夜潜张府";
@@ -19,6 +21,7 @@ namespace SHGame.Core
         [Header("Objectives")]
         public LevelObjective[] objectives;
         public bool requireAllObjectives = true;
+        public bool showObjectivesOnStart = true;
 
         [Header("Completion Settings")]
         public string nextLevelScene;
@@ -31,6 +34,7 @@ namespace SHGame.Core
         // State
         private int completedObjectives = 0;
         private bool levelCompleted = false;
+        private bool isInitialized = false;
 
         [System.Serializable]
         public class LevelObjective
@@ -39,6 +43,7 @@ namespace SHGame.Core
             public ObjectiveType type;
             public bool isCompleted = false;
             public bool isOptional = false;
+            public bool showInUI = true;
             
             // Type-specific parameters
             public string targetTag = "";
@@ -59,6 +64,22 @@ namespace SHGame.Core
             CompleteSequence    // Complete a scripted sequence
         }
 
+        private void Awake()
+        {
+            // Set up singleton reference
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+            else if (Instance != this)
+            {
+                // Another LevelManager already exists, destroy this one
+                Debug.LogWarning($"Multiple LevelManager instances detected. Destroying duplicate in {gameObject.name}.");
+                Destroy(this);
+                return;
+            }
+        }
+
         private void Start()
         {
             InitializeLevel();
@@ -68,10 +89,18 @@ namespace SHGame.Core
         private void OnDestroy()
         {
             UnsubscribeFromEvents();
+            
+            // Clear instance if this was the active one
+            if (Instance == this)
+            {
+                Instance = null;
+            }
         }
 
         private void InitializeLevel()
         {
+            if (isInitialized) return;
+            
             DebugUtility.Log($"Initializing level: {levelName}");
             
             // Reset objective states
@@ -87,12 +116,37 @@ namespace SHGame.Core
             if (UIManager.Instance != null)
             {
                 UIManager.Instance.ShowSubtitle($"{levelName}: {levelDescription}");
+                
+                if (showObjectivesOnStart)
+                {
+                    StartCoroutine(ShowObjectivesWithDelay(2f));
+                }
             }
 
             // Set appropriate mood music
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.PlayMusicForMood(AudioManager.MusicMood.Tension);
+            }
+            
+            isInitialized = true;
+        }
+        
+        private IEnumerator ShowObjectivesWithDelay(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            
+            // Add all non-hidden objectives to the information log
+            if (UIManager.Instance != null)
+            {
+                foreach (var objective in objectives)
+                {
+                    if (objective.showInUI)
+                    {
+                        string optionalText = objective.isOptional ? " (可选)" : "";
+                        UIManager.Instance.AddToInformationLog($"目标: {objective.objectiveText}{optionalText}");
+                    }
+                }
             }
         }
 
@@ -218,11 +272,14 @@ namespace SHGame.Core
             DebugUtility.Log($"Objective completed: {objectives[objectiveIndex].objectiveText}");
 
             // Show UI feedback
-            if (UIManager.Instance != null)
+            if (UIManager.Instance != null && objectives[objectiveIndex].showInUI)
             {
                 UIManager.Instance.ShowSubtitle($"目标完成: {objectives[objectiveIndex].objectiveText}");
                 UIManager.Instance.AddToInformationLog($"✓ {objectives[objectiveIndex].objectiveText}");
             }
+
+            // Trigger objective completed event
+            GameEvents.TriggerObjectiveCompleted(objectives[objectiveIndex].objectiveText);
 
             // Check if level is complete
             CheckLevelCompletion();
@@ -317,6 +374,13 @@ namespace SHGame.Core
             }
         }
 
+        public void ForceCompleteLevel()
+        {
+            if (levelCompleted) return;
+            
+            StartCoroutine(CompleteLevelSequence());
+        }
+
         #endregion
 
         #region Update Loop
@@ -390,6 +454,46 @@ namespace SHGame.Core
                 DebugUtility.Log($"{status} {objectives[i].objectiveText}{optional}");
             }
             DebugUtility.Log($"Progress: {completedObjectives}/{objectives.Length}");
+        }
+
+        public bool HasObjective(string objectiveText)
+        {
+            foreach (var objective in objectives)
+            {
+                if (objective.objectiveText == objectiveText)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool IsObjectiveCompleted(string objectiveText)
+        {
+            foreach (var objective in objectives)
+            {
+                if (objective.objectiveText == objectiveText)
+                {
+                    return objective.isCompleted;
+                }
+            }
+            return false;
+        }
+
+        public void ResetLevel()
+        {
+            // Reset objective states
+            foreach (var objective in objectives)
+            {
+                objective.isCompleted = false;
+            }
+            
+            completedObjectives = 0;
+            levelCompleted = false;
+            isInitialized = false;
+            
+            // Re-initialize
+            InitializeLevel();
         }
 
         #endregion
